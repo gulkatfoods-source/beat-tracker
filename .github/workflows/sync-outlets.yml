@@ -1,0 +1,35 @@
+name: Sync Outlets from Google Sheet
+
+on:
+  schedule:
+    # Runs daily at 6:30 AM IST (1:00 AM UTC)
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+    # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  sync:
+    name: Sync outlets → Firestore
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run sync
+        run: node scripts/sync-outlets.mjs
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+          SHEET_ID: 1CuwbzyHtMJR7O6Fitj-xay4qksrxOIkwi1eqgWiLVyA
