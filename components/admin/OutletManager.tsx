@@ -2,7 +2,7 @@
 
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {Building2, Phone, MapPin, Plus, X, Check, Pencil, Trash2, CalendarPlus, ChevronDown} from 'lucide-react';
+import {Building2, Phone, MapPin, Plus, X, Check, Pencil, Trash2, CalendarPlus, ChevronDown, RefreshCw} from 'lucide-react';
 import type {Outlet} from '@/lib/types';
 
 type Tab = 'all' | 'customer' | 'prospect';
@@ -59,6 +59,24 @@ export function OutletManager({
   const [visitSaving, setVisitSaving] = useState(false);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      const res = await fetch('/api/admin/outlets');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Failed');
+      const fresh: Outlet[] = data.outlets ?? [];
+      fresh.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
+      setOutlets(fresh);
+      setBeats([...new Set(fresh.map((o) => o.beat))].sort());
+    } catch {
+      alert('Failed to refresh');
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   const effectiveBeatList = [...new Set([...beats, newBeat].filter(Boolean))].sort();
 
@@ -205,6 +223,15 @@ export function OutletManager({
           </select>
           <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          title="Refresh list from database"
+          className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
         <button
           onClick={() => {setShowAddForm((v) => !v); setEditingId(null);}}
           className="flex items-center gap-1.5 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700"
