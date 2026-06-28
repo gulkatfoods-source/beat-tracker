@@ -64,15 +64,17 @@ export function OutletManager({
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      const res = await fetch('/api/admin/outlets');
+      const res = await fetch('/api/admin/outlets/sync', {method: 'POST'});
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Failed');
+      if (!res.ok) throw new Error(data.error ?? 'Sync failed');
       const fresh: Outlet[] = data.outlets ?? [];
-      fresh.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
       setOutlets(fresh);
       setBeats([...new Set(fresh.map((o) => o.beat))].sort());
-    } catch {
-      alert('Failed to refresh');
+      if (data.removed > 0) {
+        alert(`Synced with Google Sheet. Removed ${data.removed} outlet${data.removed !== 1 ? 's' : ''} no longer in the sheet.`);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Sync failed');
     } finally {
       setRefreshing(false);
     }
