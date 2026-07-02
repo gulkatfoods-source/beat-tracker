@@ -3,10 +3,12 @@
 import Image from 'next/image';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useRouter, useSearchParams} from 'next/navigation';
-import {Building2, Phone, MapPin, RefreshCw, Users, UserSearch, Star, Calendar, TrendingUp, CheckSquare, Square} from 'lucide-react';
+import {Building2, Phone, MapPin, RefreshCw, Users, UserSearch, Star, Calendar, TrendingUp, CheckSquare, Square, BarChart3, List} from 'lucide-react';
 import type {Outlet} from '@/lib/types';
+import {InsightsPanel} from './InsightsPanel';
 
 type TypeFilter = 'all' | 'customer' | 'prospect';
+type DashTab = 'outlets' | 'insights';
 
 function formatDate(dateStr?: string): string {
   if (!dateStr) return 'Never';
@@ -33,6 +35,8 @@ export function BeatDashboard() {
   const [loading, setLoading] = useState(false);
   const [beatsLoading, setBeatsLoading] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+
+  const [dashTab, setDashTab] = useState<DashTab>('insights');
 
   const selectedBeats = parseBeats(searchParams.get('beats') ?? searchParams.get('beat'));
   const typeFilter = (searchParams.get('type') ?? 'all') as TypeFilter;
@@ -204,57 +208,93 @@ export function BeatDashboard() {
 
         {someSelected && (
           <>
-            {/* Type filter */}
-            <div className="flex gap-2">
-              {(['all', 'customer', 'prospect'] as TypeFilter[]).map((t) => (
+            {/* Tab switcher: Insights | Outlets */}
+            <div className="flex gap-1 rounded-lg bg-gray-200 p-1">
+              {([
+                {key: 'insights' as DashTab, label: 'Insights', icon: <BarChart3 className="h-3.5 w-3.5" />},
+                {key: 'outlets' as DashTab, label: 'Outlets', icon: <List className="h-3.5 w-3.5" />},
+              ]).map(tab => (
                 <button
-                  key={t}
-                  onClick={() => navigate(selectedBeats, t)}
-                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-                    typeFilter === t
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-50'
+                  key={tab.key}
+                  onClick={() => setDashTab(tab.key)}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                    dashTab === tab.key
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  {t === 'all' ? 'All' : t === 'customer' ? 'Customers' : 'Prospects'}
+                  {tab.icon}{tab.label}
                 </button>
               ))}
             </div>
 
-            {/* Stats */}
-            {!loading && outlets.length > 0 && (
-              <div className="grid grid-cols-4 gap-2">
-                <StatCard icon={<Building2 className="h-4 w-4" />} label="Total" value={outlets.length} color="gray" />
-                <StatCard icon={<Users className="h-4 w-4" />} label="Customers" value={customerCount} color="green" />
-                <StatCard icon={<UserSearch className="h-4 w-4" />} label="Prospects" value={prospectCount} color="amber" />
-                <StatCard icon={<Star className="h-4 w-4" />} label="Today" value={todayOutlets.length} color="blue" highlight={todayOutlets.length > 0} />
-              </div>
-            )}
-
-            {/* Outlet list */}
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-24 animate-pulse rounded-xl bg-gray-200" />
-                ))}
-              </div>
-            ) : outlets.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-gray-300 bg-white py-16 text-center">
-                <Building2 className="mx-auto mb-3 h-10 w-10 text-gray-300" />
-                <p className="font-semibold text-gray-600">No outlets found</p>
-                <p className="mt-1 text-sm text-gray-400">
-                  {typeFilter !== 'all' ? `No ${typeFilter}s in the selected beat${selectedBeats.length > 1 ? 's' : ''} yet.` : 'No outlets in the selected beat yet.'}
-                </p>
-              </div>
+            {dashTab === 'insights' ? (
+              /* ── Insights Tab ─── */
+              loading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-24 animate-pulse rounded-xl bg-gray-200" />
+                  ))}
+                </div>
+              ) : (
+                <InsightsPanel outlets={outlets} selectedBeats={selectedBeats} />
+              )
             ) : (
-              <div className="space-y-3">
-                {todayOutlets.length > 0 && typeFilter === 'all' && (
-                  <SectionLabel icon={<TrendingUp className="h-3.5 w-3.5" />} label={`Visited Today (${todayOutlets.length})`} accent />
+              /* ── Outlets Tab ─── */
+              <>
+                {/* Type filter */}
+                <div className="flex gap-2">
+                  {(['all', 'customer', 'prospect'] as TypeFilter[]).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => navigate(selectedBeats, t)}
+                      className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+                        typeFilter === t
+                          ? 'bg-gray-900 text-white'
+                          : 'bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {t === 'all' ? 'All' : t === 'customer' ? 'Customers' : 'Prospects'}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Stats */}
+                {!loading && outlets.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    <StatCard icon={<Building2 className="h-4 w-4" />} label="Total" value={outlets.length} color="gray" />
+                    <StatCard icon={<Users className="h-4 w-4" />} label="Customers" value={customerCount} color="green" />
+                    <StatCard icon={<UserSearch className="h-4 w-4" />} label="Prospects" value={prospectCount} color="amber" />
+                    <StatCard icon={<Star className="h-4 w-4" />} label="Today" value={todayOutlets.length} color="blue" highlight={todayOutlets.length > 0} />
+                  </div>
                 )}
-                {outlets.map((outlet) => (
-                  <OutletCard key={outlet.id} outlet={outlet} today={today} showBeatTag={showBeatTag} />
-                ))}
-              </div>
+
+                {/* Outlet list */}
+                {loading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-24 animate-pulse rounded-xl bg-gray-200" />
+                    ))}
+                  </div>
+                ) : outlets.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-gray-300 bg-white py-16 text-center">
+                    <Building2 className="mx-auto mb-3 h-10 w-10 text-gray-300" />
+                    <p className="font-semibold text-gray-600">No outlets found</p>
+                    <p className="mt-1 text-sm text-gray-400">
+                      {typeFilter !== 'all' ? `No ${typeFilter}s in the selected beat${selectedBeats.length > 1 ? 's' : ''} yet.` : 'No outlets in the selected beat yet.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {todayOutlets.length > 0 && typeFilter === 'all' && (
+                      <SectionLabel icon={<TrendingUp className="h-3.5 w-3.5" />} label={`Visited Today (${todayOutlets.length})`} accent />
+                    )}
+                    {outlets.map((outlet) => (
+                      <OutletCard key={outlet.id} outlet={outlet} today={today} showBeatTag={showBeatTag} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
 
             {lastRefreshed && !loading && (
